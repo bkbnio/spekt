@@ -12,6 +12,7 @@ data class Path(
   val head: Operation? = null,
   val patch: Operation? = null,
   val trace: Operation? = null,
+  val parameters: List<Parameter> = emptyList(),
 ) {
   @Serializable
   data class Operation(
@@ -22,11 +23,6 @@ data class Path(
     val parameters: List<Parameter> = emptyList(),
     val requestBody: RequestBody? = null,
     val responses: Map<String, Response> = emptyMap(),
-  )
-
-  @Serializable
-  data class Parameter(
-    val name: String? = null,
   )
 
   @Serializable

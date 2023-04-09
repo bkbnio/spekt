@@ -1,5 +1,6 @@
 rootProject.name = "spek"
 
+include("openapi-3-0")
 include("swagger-2-0")
 
 // Set Project Gradle Names

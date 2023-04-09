@@ -6,9 +6,9 @@ import kotlinx.serialization.json.Json
 
 class SwaggerTest : DescribeSpec({
   describe("File Utils") {
-    it("can read a file") {
+    it("Can deserialize the docker spec") {
       // arrange
-      val spec = readFile("docker-v1_4_2.json")
+      val spec = readFile("docker.json")
 
       // act
       val result = json.decodeFromString(Swagger.serializer(), spec)

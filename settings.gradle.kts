@@ -1,4 +1,4 @@
-rootProject.name = "contrakts"
+rootProject.name = "spek"
 
 include("swagger-2-0")
 

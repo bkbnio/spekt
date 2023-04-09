@@ -16,3 +16,9 @@ naming:
     active: false
   PackageNaming:
     active: false
+
+formatting:
+  PackageName:
+    active: false
+  Indentation:
+    indentSize: 2

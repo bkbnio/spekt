@@ -1,4 +1,4 @@
-package io.bkbn.contrakts.swagger_2_0
+package io.bkbn.spek.swagger_2_0
 
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.SerialName
@@ -23,6 +23,7 @@ object DefinitionSerializer : JsonContentPolymorphicSerializer<Definition>(Defin
         else -> throw IllegalArgumentException("Unknown type ${element.jsonObject}")
       }
     }
+
     else -> throw IllegalArgumentException("Unknown definition ${element.jsonObject}")
   }
 }
@@ -88,4 +89,3 @@ data class AllOfDefinition(
 ) : Definition {
   override val description: String? = null
 }
-

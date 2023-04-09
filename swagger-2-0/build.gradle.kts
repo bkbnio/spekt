@@ -10,19 +10,18 @@ plugins {
 }
 
 dependencies {
+  // Versions
+  val detektVersion: String by project
+
   implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0")
+
+  // Formatting
+  detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:$detektVersion")
 }
 
 sourdoughLibrary {
-  githubOrg.set("bkbnio")
-  githubRepo.set("contrakts")
-  libraryName.set("contrakts-swagger-2-0")
-  libraryDescription.set("Swagger 2.0 Contract Definition")
-  licenseName.set("MIT License")
-  licenseUrl.set("https://mit-license.org")
-  developerId.set("unredundant")
-  developerName.set("Ryan Brink")
-  developerEmail.set("admin@bkbn.io")
+  libraryName.set("Swagger 2.0 Spec")
+  libraryDescription.set("Swagger 2.0 Spec Classes")
 }
 
 testing {

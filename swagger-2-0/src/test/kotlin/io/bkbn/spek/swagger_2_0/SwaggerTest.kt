@@ -1,12 +1,8 @@
-package io.bkbn.contrakts.swagger_2_0
+package io.bkbn.spek.swagger_2_0
 
 import io.kotest.core.spec.style.DescribeSpec
-import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.modules.SerializersModule
-import kotlinx.serialization.modules.polymorphic
-import kotlinx.serialization.modules.subclass
 
 class SwaggerTest : DescribeSpec({
   describe("File Utils") {
@@ -27,6 +23,7 @@ class SwaggerTest : DescribeSpec({
       ignoreUnknownKeys = true
       isLenient = true
     }
+
     fun readFile(path: String) = this::class.java.classLoader
       ?.getResource(path)
       ?.readText()

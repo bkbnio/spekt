@@ -1,12 +1,11 @@
-rootProject.name = "sourdough-kt"
+rootProject.name = "contrakts"
 
-include("app")
-include("api")
-include("cli")
-include("client")
-include("domain")
-include("lib")
-include("persistence")
+include("swagger-2-0")
+
+// Set Project Gradle Names
+run {
+  rootProject.children.forEach { it.name = "${rootProject.name}-${it.name}" }
+}
 
 // Feature Previews
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")

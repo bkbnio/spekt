@@ -10,3 +10,9 @@ style:
     excludes: ['**/test/**/*', '**/testIntegration/**/*']
     active: true
     maxLineLength: 120
+
+naming:
+  ConstructorParameterNaming:
+    active: false
+  PackageNaming:
+    active: false

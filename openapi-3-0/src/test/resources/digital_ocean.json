@@ -42845,7 +42845,7 @@
               "features": [
                 "private_networking",
                 "backups",
-                "ipv6",
+                "ip",
                 "metadata"
               ],
               "available": true

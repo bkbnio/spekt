@@ -11,7 +11,7 @@ data class Path(
   val options: Operation? = null,
   val head: Operation? = null,
   val patch: Operation? = null,
-  val parameters: List<Parameter> = emptyList(),
+//  val parameters: List<Parameter> = emptyList(),
 ) {
   @Serializable
   data class Operation(
@@ -19,7 +19,7 @@ data class Path(
     val description: String? = null,
     val operationId: String? = null,
     val produces: List<String> = emptyList(),
-    val parameters: List<Parameter> = emptyList(),
+//    val parameters: List<Parameter> = emptyList(),
   )
 
   @Serializable

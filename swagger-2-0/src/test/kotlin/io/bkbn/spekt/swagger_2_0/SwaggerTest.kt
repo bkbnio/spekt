@@ -1,27 +1,17 @@
-package io.bkbn.spek.openapi_3_0
+package io.bkbn.spekt.swagger_2_0
 
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldNotBe
 import kotlinx.serialization.json.Json
 
-class OpenApiTest : DescribeSpec({
+class SwaggerTest : DescribeSpec({
   describe("File Utils") {
-    it("Can deserialize the github spec") {
+    it("Can deserialize the docker spec") {
       // arrange
-      val spec = readFile("github.json")
+      val spec = readFile("docker.json")
 
       // act
-      val result = json.decodeFromString(OpenApi.serializer(), spec)
-
-      // assert
-      result shouldNotBe null
-    }
-    it("Can deserialize the digital ocean spec") {
-      // arrange
-      val spec = readFile("digital_ocean.json")
-
-      // act
-      val result = json.decodeFromString(OpenApi.serializer(), spec)
+      val result = json.decodeFromString(Swagger.serializer(), spec)
 
       // assert
       result shouldNotBe null

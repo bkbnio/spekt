@@ -1,9 +1,9 @@
-package io.bkbn.spek.openapi_3_0
+package io.bkbn.spekt.swagger_2_0
 
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class ExternalDocumentation(
+data class Tag(
+  val name: String,
   val description: String? = null,
-  val url: String,
 )

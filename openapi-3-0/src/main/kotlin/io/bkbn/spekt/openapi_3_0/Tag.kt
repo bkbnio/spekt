@@ -1,4 +1,4 @@
-package io.bkbn.spek.openapi_3_0
+package io.bkbn.spekt.openapi_3_0
 
 import kotlinx.serialization.Serializable
 

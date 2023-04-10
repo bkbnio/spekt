@@ -1,4 +1,4 @@
-package io.bkbn.spek.swagger_2_0
+package io.bkbn.spekt.swagger_2_0
 
 import kotlinx.serialization.Serializable
 

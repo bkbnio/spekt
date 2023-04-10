@@ -1,4 +1,4 @@
-rootProject.name = "spek"
+rootProject.name = "spekt"
 
 include("openapi-3-0")
 include("swagger-2-0")

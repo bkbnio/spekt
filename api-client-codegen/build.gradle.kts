@@ -20,6 +20,8 @@ dependencies {
 
   api("com.squareup:kotlinpoet:1.13.1")
 
+  implementation("io.ktor:ktor-client-core:2.3.0")
+
   // Formatting
   detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:$detektVersion")
 }

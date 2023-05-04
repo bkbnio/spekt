@@ -2,9 +2,11 @@ package io.bkbn.spekt.api.client.codegen
 
 import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
+import com.squareup.kotlinpoet.MemberName
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeAliasSpec
@@ -24,6 +26,9 @@ import io.bkbn.spekt.openapi_3_0.Path
 import io.bkbn.spekt.openapi_3_0.ReferenceSchema
 import io.bkbn.spekt.openapi_3_0.Schema
 import io.bkbn.spekt.openapi_3_0.StringSchema
+import io.ktor.client.HttpClient
+import io.ktor.client.statement.HttpResponse
+import io.ktor.http.HttpMethod
 import java.util.Locale
 
 internal object OpenApiClientGenerator {
@@ -145,21 +150,30 @@ internal object OpenApiClientGenerator {
 
   private fun generateRequests(spek: OpenApi): List<FileSpec> = spek.paths.map { (slug, path) ->
     listOfNotNull(
-      path.get?.toRequest(slug, HttpMethod.GET),
-      path.put?.toRequest(slug, HttpMethod.PUT),
-      path.post?.toRequest(slug, HttpMethod.POST),
-      path.delete?.toRequest(slug, HttpMethod.DELETE),
-      path.options?.toRequest(slug, HttpMethod.OPTIONS),
-      path.head?.toRequest(slug, HttpMethod.HEAD),
-      path.patch?.toRequest(slug, HttpMethod.PATCH),
-      path.trace?.toRequest(slug, HttpMethod.TRACE)
+      path.get?.toRequest(slug, HttpMethod.Get),
+      path.put?.toRequest(slug, HttpMethod.Put),
+      path.post?.toRequest(slug, HttpMethod.Post),
+      path.delete?.toRequest(slug, HttpMethod.Delete),
+      path.options?.toRequest(slug, HttpMethod.Options),
+      path.head?.toRequest(slug, HttpMethod.Head),
+      path.patch?.toRequest(slug, HttpMethod.Patch),
+      path.trace?.toRequest(slug, HttpMethod("Trace"))
     )
   }.flatten()
 
   private fun Path.Operation.toRequest(slug: String, httpMethod: HttpMethod): FileSpec {
     val name = operationId?.capitalized() ?: error("Currently an operation id is required")
     return FileSpec.builder("io.bkbn.spekt.api.client.requests", name).apply {
-      println("$slug $httpMethod")
+      addFunction(FunSpec.builder(operationId!!).apply {
+        addModifiers(KModifier.SUSPEND)
+        receiver(HttpClient::class)
+        returns(HttpResponse::class.asClassName())
+        addCode(CodeBlock.builder().apply {
+          beginControlFlow("return %M(%S)", httpMethod.toMemberName(), slug)
+          addStatement("// hi")
+          endControlFlow()
+        }.build())
+      }.build())
     }.build()
   }
 
@@ -190,4 +204,16 @@ internal object OpenApiClientGenerator {
   }
 
   private fun String.sanitizePropertyName(): String = trim().replace(Regex("\\s+"), "_")
+
+  private fun HttpMethod.toMemberName() = when (this) {
+    HttpMethod.Get -> MemberName("io.ktor.client.request", "get")
+    HttpMethod.Put -> MemberName("io.ktor.client.request", "put")
+    HttpMethod.Post -> MemberName("io.ktor.client.request", "post")
+    HttpMethod.Delete -> MemberName("io.ktor.client.request", "delete")
+    HttpMethod.Options -> MemberName("io.ktor.client.request", "options")
+    HttpMethod.Head -> MemberName("io.ktor.client.request", "head")
+    HttpMethod.Patch -> MemberName("io.ktor.client.request", "patch")
+    HttpMethod("Trace") -> MemberName("io.ktor.client.request", "trace")
+    else -> error("Unsupported http method: $this")
+  }
 }

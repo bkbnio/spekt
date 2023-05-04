@@ -9,6 +9,7 @@ import io.ktor.client.plugins.auth.Auth
 import io.ktor.client.plugins.auth.providers.BearerTokens
 import io.ktor.client.plugins.auth.providers.bearer
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.get
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
@@ -29,6 +30,9 @@ suspend fun main() {
         prettyPrint = true
         isLenient = true
       })
+    }
+    defaultRequest {
+      url("https://console.neon.tech/api/v2/")
     }
   }
   val spec: OpenApi = client.get("https://dfv3qgd2ykmrx.cloudfront.net/api_spec/release/v2.json").body()

@@ -28,6 +28,7 @@ data class Path(
   @Serializable
   data class RequestBody(
     val required: Boolean? = null,
+    val content: Map<String, Content> = emptyMap(),
   )
 
   @Serializable

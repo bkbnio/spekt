@@ -35,14 +35,14 @@ internal object OpenApiClientGenerator {
 
   private fun generateModels(spek: OpenApi): List<FileSpec> = spek.components.schemas.map { (name, schema) ->
     FileSpec.builder("io.bkbn.spekt.api.client.models", name).apply {
-      generateModelFromSchema(name, schema)
+      generateModelFromSchema(spek, name, schema)
     }.build()
   }
 
   // TODO Clean this up
-  private fun FileSpec.Builder.generateModelFromSchema(name: String, schema: Schema) {
+  private fun FileSpec.Builder.generateModelFromSchema(parentSpec: OpenApi, name: String, schema: Schema) {
     when (schema) {
-      is AllOfSchema -> {}
+      is AllOfSchema -> generateAllOfSchema(parentSpec, schema, name)
       is AnyOfSchema -> {}
       is ArraySchema -> {}
       is BooleanSchema -> {}
@@ -50,6 +50,7 @@ internal object OpenApiClientGenerator {
       is IntegerSchema -> {
         addTypeAlias(TypeAliasSpec.builder(name, Int::class.asClassName()).build())
       }
+
       is ObjectSchema -> generateObjectSchema(name, schema)
       is OneOfSchema -> {}
       is ReferenceSchema -> {}
@@ -61,8 +62,10 @@ internal object OpenApiClientGenerator {
               if (enumValue.isSnake() || enumValue.isCamel()) {
                 val formattedValue = enumValue.toAngrySnake()
                 addEnumConstant(formattedValue, TypeSpec.anonymousClassBuilder().apply {
-                  addAnnotation(AnnotationSpec.builder(ClassName("kotlinx.serialization", "SerialName"))
-                    .addMember("%S", enumValue).build())
+                  addAnnotation(
+                    AnnotationSpec.builder(ClassName("kotlinx.serialization", "SerialName"))
+                      .addMember("%S", enumValue).build()
+                  )
                 }.build())
               } else {
                 addEnumConstant(enumValue)
@@ -74,6 +77,20 @@ internal object OpenApiClientGenerator {
         }
       }
     }
+  }
+
+  private fun FileSpec.Builder.generateAllOfSchema(parentSpec: OpenApi, schema: AllOfSchema, name: String) {
+    val allOf = schema.allOf
+    require(allOf.all { it is ReferenceSchema }) { "Currently, all members of an allOf schema must be ReferenceSchemas" }
+    val references = allOf.map { it as ReferenceSchema }.map { it.`$ref` }.map { it.substringAfterLast("/") }
+    val schemas = references.map { parentSpec.components.schemas[it]!! }
+    require(schemas.all { it is ObjectSchema }) { "Currently, references within an allOf schema must point to ObjectSchemas" }
+    val objectSchemas = schemas.map { it as ObjectSchema }
+    val gigaSchema = ObjectSchema(
+      properties = objectSchemas.map { it.properties }.flatMap { it.entries }.associate { it.key to it.value },
+      required = objectSchemas.flatMap { it.required }.toList()
+    )
+    generateObjectSchema(name, gigaSchema)
   }
 
   private fun FileSpec.Builder.generateObjectSchema(name: String, schema: ObjectSchema) {

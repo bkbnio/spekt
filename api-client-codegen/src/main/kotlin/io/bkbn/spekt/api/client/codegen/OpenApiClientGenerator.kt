@@ -103,19 +103,22 @@ internal object OpenApiClientGenerator {
     addType(TypeSpec.classBuilder(name).apply {
       addModifiers(KModifier.DATA)
       addAnnotation(AnnotationSpec.builder(ClassName("kotlinx.serialization", "Serializable")).build())
+      schema.properties.filter { it.value is ObjectSchema }
+        .mapValues { it.value as ObjectSchema }
+        .forEach { (k, v) -> generateObjectSchema("${name}${k.capitalized()}", v) }
       primaryConstructor(
         FunSpec.constructorBuilder().apply {
           schema.properties.forEach { (propName, propSchema) ->
             val sanitizedName = propName.sanitizePropertyName()
             val valName = if (sanitizedName.isSnake()) sanitizedName.snakeToCamel() else sanitizedName
-            addParameter(valName, propSchema.toTypeName())
+            addParameter(valName, propSchema.toTypeName(name, valName))
           }
         }.build()
       )
       schema.properties.forEach { (propName, propSchema) ->
         val sanitizedName = propName.sanitizePropertyName()
         val valName = if (sanitizedName.isSnake()) sanitizedName.snakeToCamel() else sanitizedName
-        addProperty(PropertySpec.builder(valName, propSchema.toTypeName()).apply {
+        addProperty(PropertySpec.builder(valName, propSchema.toTypeName(name, valName)).apply {
           initializer(valName)
           if (valName != propName) {
             addAnnotation(AnnotationSpec.builder(ClassName("kotlinx.serialization", "SerialName")).apply {
@@ -127,15 +130,15 @@ internal object OpenApiClientGenerator {
     }.build())
   }
 
-  private fun Schema.toTypeName(): TypeName = when (this) {
-    is AllOfSchema -> String::class.asClassName() // TODO Placeholder
-    is AnyOfSchema -> String::class.asClassName() // TODO Placeholder
-    is ArraySchema -> List::class.asClassName().parameterizedBy(items.toTypeName())
+  private fun Schema.toTypeName(parentName: String, propName: String): TypeName = when (this) {
+    is AllOfSchema -> error("AllOfSchema is not currently supported")
+    is AnyOfSchema -> error("AnyOfSchema is not currently supported")
+    is ArraySchema -> List::class.asClassName().parameterizedBy(items.toTypeName("${parentName}${propName}", "Items"))
     is BooleanSchema -> Boolean::class.asClassName()
     FreeFormSchema -> error("FreeFormSchema is not currently supported")
     is IntegerSchema -> Int::class.asClassName()
-    is ObjectSchema -> String::class.asClassName() // TODO Placeholder
-    is OneOfSchema -> String::class.asClassName() // TODO Placeholder
+    is ObjectSchema -> ClassName("io.bkbn.spekt.api.client.models", "${parentName}${propName.capitalized()}")
+    is OneOfSchema -> error("OneOfSchema is not currently supported")
     is ReferenceSchema -> ClassName("io.bkbn.spekt.api.client.models", `$ref`.substringAfterLast("/"))
     is StringSchema -> String::class.asClassName()
   }

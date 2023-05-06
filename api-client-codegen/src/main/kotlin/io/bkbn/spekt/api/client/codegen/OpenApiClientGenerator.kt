@@ -7,6 +7,7 @@ import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.MemberName
+import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeAliasSpec
@@ -19,17 +20,20 @@ import io.bkbn.spekt.openapi_3_0.ArraySchema
 import io.bkbn.spekt.openapi_3_0.BooleanSchema
 import io.bkbn.spekt.openapi_3_0.FreeFormSchema
 import io.bkbn.spekt.openapi_3_0.IntegerSchema
+import io.bkbn.spekt.openapi_3_0.LiteralParameter
 import io.bkbn.spekt.openapi_3_0.ObjectSchema
 import io.bkbn.spekt.openapi_3_0.OneOfSchema
 import io.bkbn.spekt.openapi_3_0.OpenApi
 import io.bkbn.spekt.openapi_3_0.Path
 import io.bkbn.spekt.openapi_3_0.PathOperation
+import io.bkbn.spekt.openapi_3_0.ReferenceParameter
 import io.bkbn.spekt.openapi_3_0.ReferenceSchema
 import io.bkbn.spekt.openapi_3_0.Schema
 import io.bkbn.spekt.openapi_3_0.StringSchema
 import io.ktor.client.HttpClient
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.HttpMethod
+import java.io.File
 import java.util.Locale
 
 internal object OpenApiClientGenerator {
@@ -151,22 +155,22 @@ internal object OpenApiClientGenerator {
 
   private fun generateRequests(spek: OpenApi): List<FileSpec> = spek.paths.map { (slug, path) ->
     listOfNotNull(
-      path.get?.toRequest(slug, HttpMethod.Get),
-      path.put?.toRequest(slug, HttpMethod.Put),
-      path.post?.toRequest(slug, HttpMethod.Post),
-      path.delete?.toRequest(slug, HttpMethod.Delete),
-      path.options?.toRequest(slug, HttpMethod.Options),
-      path.head?.toRequest(slug, HttpMethod.Head),
-      path.patch?.toRequest(slug, HttpMethod.Patch),
-      path.trace?.toRequest(slug, HttpMethod("Trace"))
+      path.get?.let { path.toRequest(it, HttpMethod.Get, slug) },
+      path.put?.let { path.toRequest(it, HttpMethod.Put, slug) },
+      path.post?.let { path.toRequest(it, HttpMethod.Post, slug) },
+      path.delete?.let { path.toRequest(it, HttpMethod.Delete, slug) },
+      path.options?.let { path.toRequest(it, HttpMethod.Options, slug) },
+      path.head?.let { path.toRequest(it, HttpMethod.Head, slug) },
+      path.patch?.let { path.toRequest(it, HttpMethod.Patch, slug) },
+      path.trace?.let { path.toRequest(it, HttpMethod("Trace"), slug) }
     )
   }.flatten()
 
-  private fun PathOperation.toRequest(slug: String, httpMethod: HttpMethod): FileSpec {
-    val operation = this
-    val name = operationId?.capitalized() ?: error("Currently an operation id is required")
+  private fun Path.toRequest(operation: PathOperation, httpMethod: HttpMethod, slug: String): FileSpec {
+    var mutableSlug = slug
+    val name = operation.operationId?.capitalized() ?: error("Currently an operation id is required")
     return FileSpec.builder("io.bkbn.spekt.api.client.requests", name).apply {
-      addFunction(FunSpec.builder(operationId!!).apply {
+      addFunction(FunSpec.builder(operation.operationId!!).apply {
         if (operation.description != null) {
           addKdoc(operation.description!!)
         }
@@ -174,21 +178,44 @@ internal object OpenApiClientGenerator {
         receiver(HttpClient::class)
         returns(HttpResponse::class.asClassName())
 
-        if (requestBody?.required == true) {
-          require(requestBody!!.content["application/json"] != null) { "Currently, only json request bodies are supported" }
-          require(requestBody!!.content["application/json"]!!.schema is ReferenceSchema) { "Currently, only references are supported" }
-          val reference = requestBody!!.content["application/json"]!!.schema as ReferenceSchema
+        if (operation.requestBody?.required == true) {
+          val requestBody = operation.requestBody!!
+          require(requestBody.content["application/json"] != null) { "Currently, only json request bodies are supported" }
+          require(requestBody.content["application/json"]!!.schema is ReferenceSchema) { "Currently, only references are supported" }
+          val reference = requestBody.content["application/json"]!!.schema as ReferenceSchema
           val schema = reference.`$ref`.substringAfterLast("/")
           addParameter("requestBody", ClassName("io.bkbn.spekt.api.client.models", schema))
         }
 
+        this@toRequest.parameters.plus(this@toRequest.parameters).toSet().forEach { parameter ->
+          when (parameter) {
+            is ReferenceParameter -> error("References are not currently supported")
+            is LiteralParameter -> {
+              var paramName = parameter.name.sanitizePropertyName()
+              paramName = if (paramName.isSnake()) paramName.snakeToCamel() else paramName
+              addParameter(paramName, String::class)
+
+              if (parameter.`in`.lowercase() == "path") {
+                mutableSlug = replacePathParameter(mutableSlug, parameter.name, paramName)
+              }
+            }
+          }
+        }
+
         addCode(CodeBlock.builder().apply {
-          beginControlFlow("return %M(%S)", httpMethod.toMemberName(), slug)
+          beginControlFlow("return %M(%P)", httpMethod.toMemberName(), mutableSlug)
           addStatement("// hi")
           endControlFlow()
         }.build())
       }.build())
     }.build()
+  }
+
+  private fun replacePathParameter(path: String, key: String, replacement: String): String {
+    val pattern = "\\{$key}".toRegex()
+    return pattern.replace(path) {
+      "$$replacement"
+    }
   }
 
   private fun String.capitalized() =

@@ -1,6 +1,9 @@
+@file:OptIn(ExperimentalSerializationApi::class)
+
 package io.bkbn.spekt.openapi_3_0
 
 import kotlinx.serialization.DeserializationStrategy
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonContentPolymorphicSerializer
 import kotlinx.serialization.json.JsonElement
@@ -27,10 +30,10 @@ object SecuritySchemeSerializer : JsonContentPolymorphicSerializer<SecuritySchem
 sealed interface SecurityScheme
 
 @Serializable
-object BasicAuthSecurityScheme : SecurityScheme
+data class BasicAuthSecurityScheme(val type: String, val scheme: String) : SecurityScheme
 
 @Serializable
-object BearerAuthSecurityScheme : SecurityScheme
+data class BearerAuthSecurityScheme(val type: String, val scheme: String) : SecurityScheme
 
 @Serializable
 data class ApiKeySecurityScheme(

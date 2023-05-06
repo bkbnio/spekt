@@ -3,7 +3,6 @@ rootProject.name = "spekt"
 include("api-client-codegen")
 include("common")
 include("openapi-3-0")
-include("playground")
 include("swagger-2-0")
 
 // Set Project Gradle Names

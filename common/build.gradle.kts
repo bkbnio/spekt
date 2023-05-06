@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 plugins {
   kotlin("jvm")
   kotlin("plugin.serialization")
@@ -17,15 +15,13 @@ dependencies {
 
   implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0")
 
-  api(projects.spektCommon)
-
   // Formatting
   detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:$detektVersion")
 }
 
 sourdoughLibrary {
-  libraryName.set("OpenApi 3.0 Spec")
-  libraryDescription.set("OpenApi 2.0 Spec Classes")
+  libraryName.set("Spekt Common")
+  libraryDescription.set("Common classes for Spekt")
 }
 
 testing {

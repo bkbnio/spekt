@@ -26,6 +26,16 @@ class OpenApiTest : DescribeSpec({
       // assert
       result shouldNotBe null
     }
+    it("Can deserialize the neon spec") {
+      // arrange
+      val spec = readFile("neon.json")
+
+      // act
+      val result = json.decodeFromString(OpenApi.serializer(), spec)
+
+      // assert
+      result shouldNotBe null
+    }
   }
 }) {
   companion object {

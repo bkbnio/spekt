@@ -1,5 +1,6 @@
 package io.bkbn.spekt.openapi_3_0
 
+import io.bkbn.spekt.common.Spek
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -12,4 +13,4 @@ data class OpenApi(
   val security: List<Map<String, List<String>>> = emptyList(),
   val tags: List<Tag> = listOf(),
   val externalDocs: ExternalDocumentation? = null
-)
+) : Spek

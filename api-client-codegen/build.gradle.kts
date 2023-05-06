@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 plugins {
   kotlin("jvm")
   kotlin("plugin.serialization")
@@ -15,17 +13,22 @@ dependencies {
   // Versions
   val detektVersion: String by project
 
-  implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0")
+  // Spekt
+  implementation(projects.spektCommon)
+  implementation(projects.spektOpenapi30)
+  implementation(projects.spektSwagger20)
 
-  api(projects.spektCommon)
+  api("com.squareup:kotlinpoet:1.13.1")
+
+  implementation("io.ktor:ktor-client-core:2.3.0")
 
   // Formatting
   detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:$detektVersion")
 }
 
 sourdoughLibrary {
-  libraryName.set("OpenApi 3.0 Spec")
-  libraryDescription.set("OpenApi 2.0 Spec Classes")
+  libraryName.set("Spekt API Client Codegen")
+  libraryDescription.set("Generates KotlinPoet Manifests for creating HTTP Clients from a Spekt API Spec")
 }
 
 testing {

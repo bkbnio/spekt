@@ -1,5 +1,6 @@
 package io.bkbn.spekt.swagger_2_0
 
+import io.bkbn.spekt.common.Spek
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -13,4 +14,4 @@ data class Swagger(
   val tags: List<Tag>,
   val definitions: Map<String, Definition>,
   val paths: Map<String, Path>
-)
+) : Spek

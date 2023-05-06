@@ -173,6 +173,15 @@ internal object OpenApiClientGenerator {
         addModifiers(KModifier.SUSPEND)
         receiver(HttpClient::class)
         returns(HttpResponse::class.asClassName())
+
+        if (requestBody?.required == true) {
+          require(requestBody!!.content["application/json"] != null) { "Currently, only json request bodies are supported" }
+          require(requestBody!!.content["application/json"]!!.schema is ReferenceSchema) { "Currently, only references are supported" }
+          val reference = requestBody!!.content["application/json"]!!.schema as ReferenceSchema
+          val schema = reference.`$ref`.substringAfterLast("/")
+          addParameter("requestBody", ClassName("io.bkbn.spekt.api.client.models", schema))
+        }
+
         addCode(CodeBlock.builder().apply {
           beginControlFlow("return %M(%S)", httpMethod.toMemberName(), slug)
           addStatement("// hi")

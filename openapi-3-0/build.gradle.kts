@@ -9,6 +9,7 @@ plugins {
   id("org.jetbrains.kotlinx.kover")
   id("maven-publish")
   id("java-library")
+  id("signing")
 }
 
 dependencies {

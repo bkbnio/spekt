@@ -7,7 +7,6 @@ import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.MemberName
-import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeAliasSpec
@@ -33,7 +32,6 @@ import io.bkbn.spekt.openapi_3_0.StringSchema
 import io.ktor.client.HttpClient
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.HttpMethod
-import java.io.File
 import java.util.Locale
 
 internal object OpenApiClientGenerator {
@@ -50,6 +48,7 @@ internal object OpenApiClientGenerator {
   }
 
   // TODO Clean this up
+  @Suppress("CyclomaticComplexMethod")
   private fun FileSpec.Builder.generateModelFromSchema(parentSpec: OpenApi, name: String, schema: Schema) {
     when (schema) {
       is AllOfSchema -> generateAllOfSchema(parentSpec, schema, name)
@@ -67,21 +66,26 @@ internal object OpenApiClientGenerator {
       is StringSchema -> {
         // TODO Date and DateTime and stuff?
         if (schema.enum?.isNotEmpty() == true) {
-          addType(TypeSpec.enumBuilder(name).apply {
-            schema.enum?.filterNotNull()?.forEach { enumValue ->
-              if (enumValue.isSnake() || enumValue.isCamel()) {
-                val formattedValue = enumValue.toAngrySnake()
-                addEnumConstant(formattedValue, TypeSpec.anonymousClassBuilder().apply {
-                  addAnnotation(
-                    AnnotationSpec.builder(ClassName("kotlinx.serialization", "SerialName"))
-                      .addMember("%S", enumValue).build()
+          addType(
+            TypeSpec.enumBuilder(name).apply {
+              schema.enum?.filterNotNull()?.forEach { enumValue ->
+                if (enumValue.isSnake() || enumValue.isCamel()) {
+                  val formattedValue = enumValue.toAngrySnake()
+                  addEnumConstant(
+                    formattedValue,
+                    TypeSpec.anonymousClassBuilder().apply {
+                      addAnnotation(
+                        AnnotationSpec.builder(ClassName("kotlinx.serialization", "SerialName"))
+                          .addMember("%S", enumValue).build()
+                      )
+                    }.build()
                   )
-                }.build())
-              } else {
-                addEnumConstant(enumValue)
+                } else {
+                  addEnumConstant(enumValue)
+                }
               }
-            }
-          }.build())
+            }.build()
+          )
         } else {
           addTypeAlias(TypeAliasSpec.builder(name, String::class.asClassName()).build())
         }
@@ -91,10 +95,14 @@ internal object OpenApiClientGenerator {
 
   private fun FileSpec.Builder.generateAllOfSchema(parentSpec: OpenApi, schema: AllOfSchema, name: String) {
     val allOf = schema.allOf
-    require(allOf.all { it is ReferenceSchema }) { "Currently, all members of an allOf schema must be ReferenceSchemas" }
+    require(allOf.all { it is ReferenceSchema }) {
+      "Currently, all members of an allOf schema must be ReferenceSchemas"
+    }
     val references = allOf.map { it as ReferenceSchema }.map { it.`$ref` }.map { it.substringAfterLast("/") }
     val schemas = references.map { parentSpec.components.schemas[it]!! }
-    require(schemas.all { it is ObjectSchema }) { "Currently, references within an allOf schema must point to ObjectSchemas" }
+    require(schemas.all { it is ObjectSchema }) {
+      "Currently, references within an allOf schema must point to ObjectSchemas"
+    }
     val objectSchemas = schemas.map { it as ObjectSchema }
     val gigaSchema = ObjectSchema(
       properties = objectSchemas.map { it.properties }.flatMap { it.entries }.associate { it.key to it.value },
@@ -105,49 +113,59 @@ internal object OpenApiClientGenerator {
 
   private fun FileSpec.Builder.generateObjectSchema(name: String, schema: ObjectSchema) {
     if (schema.properties.isEmpty()) {
-      addType(TypeSpec.objectBuilder(name).apply {
-        addAnnotation(AnnotationSpec.builder(ClassName("kotlinx.serialization", "Serializable")).build())
-      }.build())
-      return
-    }
-    addType(TypeSpec.classBuilder(name).apply {
-      addModifiers(KModifier.DATA)
-      addAnnotation(AnnotationSpec.builder(ClassName("kotlinx.serialization", "Serializable")).build())
-      schema.properties.filter { it.value is ObjectSchema }
-        .mapValues { it.value as ObjectSchema }
-        .forEach { (k, v) -> generateObjectSchema("${name}${k.capitalized()}", v) }
-      primaryConstructor(
-        FunSpec.constructorBuilder().apply {
-          schema.properties.forEach { (propName, propSchema) ->
-            val sanitizedName = propName.sanitizePropertyName()
-            val valName = if (sanitizedName.isSnake()) sanitizedName.snakeToCamel() else sanitizedName
-            addParameter(valName, propSchema.toTypeName(name, valName))
-          }
+      addType(
+        TypeSpec.objectBuilder(name).apply {
+          addAnnotation(AnnotationSpec.builder(ClassName("kotlinx.serialization", "Serializable")).build())
         }.build()
       )
-      schema.properties.forEach { (propName, propSchema) ->
-        val sanitizedName = propName.sanitizePropertyName()
-        val valName = if (sanitizedName.isSnake()) sanitizedName.snakeToCamel() else sanitizedName
-        addProperty(PropertySpec.builder(valName, propSchema.toTypeName(name, valName)).apply {
-          initializer(valName)
-          if (valName != propName) {
-            addAnnotation(AnnotationSpec.builder(ClassName("kotlinx.serialization", "SerialName")).apply {
-              addMember("\"$propName\"")
-            }.build())
-          }
-        }.build())
-      }
-    }.build())
+      return
+    }
+    addType(
+      TypeSpec.classBuilder(name).apply {
+        addModifiers(KModifier.DATA)
+        addAnnotation(
+          AnnotationSpec.builder(ClassName("kotlinx.serialization", "Serializable")).build()
+        )
+        schema.properties.filter { it.value is ObjectSchema }
+          .mapValues { it.value as ObjectSchema }
+          .forEach { (k, v) -> generateObjectSchema("${name}${k.capitalized()}", v) }
+        primaryConstructor(
+          FunSpec.constructorBuilder().apply {
+            schema.properties.forEach { (propName, propSchema) ->
+              val sanitizedName = propName.sanitizePropertyName()
+              val valName = if (sanitizedName.isSnake()) sanitizedName.snakeToCamel() else sanitizedName
+              addParameter(valName, propSchema.toTypeName(name, valName))
+            }
+          }.build()
+        )
+        schema.properties.forEach { (propName, propSchema) ->
+          val sanitizedName = propName.sanitizePropertyName()
+          val valName = if (sanitizedName.isSnake()) sanitizedName.snakeToCamel() else sanitizedName
+          addProperty(
+            PropertySpec.builder(valName, propSchema.toTypeName(name, valName)).apply {
+              initializer(valName)
+              if (valName != propName) {
+                addAnnotation(
+                  AnnotationSpec.builder(ClassName("kotlinx.serialization", "SerialName")).apply {
+                    addMember("\"$propName\"")
+                  }.build()
+                )
+              }
+            }.build()
+          )
+        }
+      }.build()
+    )
   }
 
   private fun Schema.toTypeName(parentName: String, propName: String): TypeName = when (this) {
     is AllOfSchema -> error("AllOfSchema is not currently supported")
     is AnyOfSchema -> error("AnyOfSchema is not currently supported")
-    is ArraySchema -> List::class.asClassName().parameterizedBy(items.toTypeName("${parentName}${propName}", "Items"))
+    is ArraySchema -> List::class.asClassName().parameterizedBy(items.toTypeName("$parentName$propName", "Items"))
     is BooleanSchema -> Boolean::class.asClassName()
     FreeFormSchema -> error("FreeFormSchema is not currently supported")
     is IntegerSchema -> Int::class.asClassName()
-    is ObjectSchema -> ClassName("io.bkbn.spekt.api.client.models", "${parentName}${propName.capitalized()}")
+    is ObjectSchema -> ClassName("io.bkbn.spekt.api.client.models", "$parentName${propName.capitalized()}")
     is OneOfSchema -> error("OneOfSchema is not currently supported")
     is ReferenceSchema -> ClassName("io.bkbn.spekt.api.client.models", `$ref`.substringAfterLast("/"))
     is StringSchema -> String::class.asClassName()
@@ -166,63 +184,72 @@ internal object OpenApiClientGenerator {
     )
   }.flatten()
 
+  @Suppress("LongMethod", "CyclomaticComplexMethod")
   private fun Path.toRequest(operation: PathOperation, httpMethod: HttpMethod, slug: String): FileSpec {
     var mutableSlug = slug
     val name = operation.operationId?.capitalized() ?: error("Currently an operation id is required")
     return FileSpec.builder("io.bkbn.spekt.api.client.requests", name).apply {
-      addFunction(FunSpec.builder(operation.operationId!!).apply {
-        if (operation.description != null) {
-          addKdoc(operation.description!!)
-        }
-        addModifiers(KModifier.SUSPEND)
-        receiver(HttpClient::class)
-        returns(HttpResponse::class.asClassName())
-
-        if (operation.requestBody?.required == true) {
-          val requestBody = operation.requestBody!!
-          require(requestBody.content["application/json"] != null) { "Currently, only json request bodies are supported" }
-          require(requestBody.content["application/json"]!!.schema is ReferenceSchema) { "Currently, only references are supported" }
-          val reference = requestBody.content["application/json"]!!.schema as ReferenceSchema
-          val schema = reference.`$ref`.substringAfterLast("/")
-          addParameter("requestBody", ClassName("io.bkbn.spekt.api.client.models", schema))
-        }
-
-        val parameters = this@toRequest.parameters.plus(operation.parameters).toSet()
-
-        parameters.forEach { parameter ->
-          when (parameter) {
-            is ReferenceParameter -> error("References are not currently supported")
-            is LiteralParameter -> {
-              var paramName = parameter.name.sanitizePropertyName()
-              paramName = if (paramName.isSnake()) paramName.snakeToCamel() else paramName
-              addParameter(paramName, String::class)
-
-              if (parameter.`in`.lowercase() == "path") {
-                mutableSlug = replacePathParameter(mutableSlug, parameter.name, paramName)
-              }
-            }
+      addFunction(
+        FunSpec.builder(operation.operationId!!).apply {
+          if (operation.description != null) {
+            addKdoc(operation.description!!)
           }
-        }
+          addModifiers(KModifier.SUSPEND)
+          receiver(HttpClient::class)
+          returns(HttpResponse::class.asClassName())
 
-        addCode(CodeBlock.builder().apply {
-          beginControlFlow("return %M(%P)", httpMethod.toMemberName(), mutableSlug)
-          beginControlFlow("url")
+          if (operation.requestBody?.required == true) {
+            val requestBody = operation.requestBody!!
+            require(requestBody.content["application/json"] != null) {
+              "Currently, only json request bodies are supported"
+            }
+            require(requestBody.content["application/json"]!!.schema is ReferenceSchema) {
+              "Currently, only references are supported"
+            }
+            val reference = requestBody.content["application/json"]!!.schema as ReferenceSchema
+            val schema = reference.`$ref`.substringAfterLast("/")
+            addParameter("requestBody", ClassName("io.bkbn.spekt.api.client.models", schema))
+          }
+
+          val parameters = this@toRequest.parameters.plus(operation.parameters).toSet()
+
           parameters.forEach { parameter ->
             when (parameter) {
               is ReferenceParameter -> error("References are not currently supported")
               is LiteralParameter -> {
                 var paramName = parameter.name.sanitizePropertyName()
                 paramName = if (paramName.isSnake()) paramName.snakeToCamel() else paramName
-                if (parameter.`in`.lowercase() == "query") {
-                  addStatement("parameters.append(%S, %L)", paramName, paramName)
+                addParameter(paramName, String::class)
+
+                if (parameter.`in`.lowercase() == "path") {
+                  mutableSlug = replacePathParameter(mutableSlug, parameter.name, paramName)
                 }
               }
             }
           }
-          endControlFlow()
-          endControlFlow()
-        }.build())
-      }.build())
+
+          addCode(
+            CodeBlock.builder().apply {
+              beginControlFlow("return %M(%P)", httpMethod.toMemberName(), mutableSlug)
+              beginControlFlow("url")
+              parameters.forEach { parameter ->
+                when (parameter) {
+                  is ReferenceParameter -> error("References are not currently supported")
+                  is LiteralParameter -> {
+                    var paramName = parameter.name.sanitizePropertyName()
+                    paramName = if (paramName.isSnake()) paramName.snakeToCamel() else paramName
+                    if (parameter.`in`.lowercase() == "query") {
+                      addStatement("parameters.append(%S, %L)", paramName, paramName)
+                    }
+                  }
+                }
+              }
+              endControlFlow()
+              endControlFlow()
+            }.build()
+          )
+        }.build()
+      )
     }.build()
   }
 
@@ -241,15 +268,11 @@ internal object OpenApiClientGenerator {
   private fun String.isCamel() = matches(Regex("^[a-z]+(?:[A-Z][a-z]*)*$"))
 
   private fun String.snakeToCamel() = split("_").mapIndexed { index, word ->
-    if (index == 0) word
-    else word.capitalized()
+    if (index == 0) word else word.capitalized()
   }.joinToString("")
 
   private fun String.toAngrySnake(): String {
-    if (!isSnake() && !isCamel()) {
-      throw IllegalArgumentException("The provided string is neither in snake_case nor camelCase.")
-    }
-
+    require(isSnake() || isCamel()) { "The provided string is neither in snake_case nor camelCase." }
     val snakeCaseValue = if (isCamel()) {
       replace(Regex("([A-Z])"), "_$1").lowercase(Locale.getDefault())
     } else {

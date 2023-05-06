@@ -4,6 +4,6 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class RequestBody(
-    val required: Boolean? = null,
-    val content: Map<String, Content> = emptyMap(),
+  val required: Boolean? = null,
+  val content: Map<String, Content> = emptyMap(),
 )

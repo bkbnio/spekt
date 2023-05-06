@@ -8,17 +8,19 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 object SecuritySchemeSerializer : JsonContentPolymorphicSerializer<SecurityScheme>(SecurityScheme::class) {
-  override fun selectDeserializer(element: JsonElement): DeserializationStrategy<SecurityScheme> = when (element.jsonObject["type"]?.jsonPrimitive?.content) {
-    "http" -> when (element.jsonObject["scheme"]?.jsonPrimitive?.content) {
-      "basic" -> BasicAuthSecurityScheme.serializer()
-      "bearer" -> BearerAuthSecurityScheme.serializer()
-      else -> throw IllegalArgumentException("Unknown http scheme ${element.jsonObject}")
+  override fun selectDeserializer(element: JsonElement): DeserializationStrategy<SecurityScheme> =
+    when (element.jsonObject["type"]?.jsonPrimitive?.content) {
+      "http" -> when (element.jsonObject["scheme"]?.jsonPrimitive?.content) {
+        "basic" -> BasicAuthSecurityScheme.serializer()
+        "bearer" -> BearerAuthSecurityScheme.serializer()
+        else -> throw IllegalArgumentException("Unknown http scheme ${element.jsonObject}")
+      }
+
+      "apiKey" -> ApiKeySecurityScheme.serializer()
+      "openIdConnect" -> OpenIdConnectScheme.serializer()
+      "oauth2" -> OAuth2SecurityScheme.serializer()
+      else -> throw IllegalArgumentException("Unknown security scheme ${element.jsonObject}")
     }
-    "apiKey" -> ApiKeySecurityScheme.serializer()
-    "openIdConnect" -> OpenIdConnectScheme.serializer()
-    "oauth2" -> OAuth2SecurityScheme.serializer()
-    else -> throw IllegalArgumentException("Unknown security scheme ${element.jsonObject}")
-  }
 }
 
 @Serializable(with = SecuritySchemeSerializer::class)

@@ -34,7 +34,7 @@ import io.ktor.client.statement.HttpResponse
 import io.ktor.http.HttpMethod
 import java.util.Locale
 
-internal object OpenApiClientGenerator {
+internal class OpenApiClientGenerator(private val basePackage: String) {
   fun generate(spek: OpenApi): List<FileSpec> {
     val models = generateModels(spek)
     val requests = generateRequests(spek)
@@ -42,7 +42,7 @@ internal object OpenApiClientGenerator {
   }
 
   private fun generateModels(spek: OpenApi): List<FileSpec> = spek.components.schemas.map { (name, schema) ->
-    FileSpec.builder("io.bkbn.spekt.api.client.models", name).apply {
+    FileSpec.builder("$basePackage.models", name).apply {
       generateModelFromSchema(spek, name, schema)
     }.build()
   }
@@ -165,9 +165,9 @@ internal object OpenApiClientGenerator {
     is BooleanSchema -> Boolean::class.asClassName()
     FreeFormSchema -> error("FreeFormSchema is not currently supported")
     is IntegerSchema -> Int::class.asClassName()
-    is ObjectSchema -> ClassName("io.bkbn.spekt.api.client.models", "$parentName${propName.capitalized()}")
+    is ObjectSchema -> ClassName("$basePackage.models", "$parentName${propName.capitalized()}")
     is OneOfSchema -> error("OneOfSchema is not currently supported")
-    is ReferenceSchema -> ClassName("io.bkbn.spekt.api.client.models", `$ref`.substringAfterLast("/"))
+    is ReferenceSchema -> ClassName("$basePackage.models", `$ref`.substringAfterLast("/"))
     is StringSchema -> String::class.asClassName()
   }
 
@@ -188,7 +188,7 @@ internal object OpenApiClientGenerator {
   private fun Path.toRequest(operation: PathOperation, httpMethod: HttpMethod, slug: String): FileSpec {
     var mutableSlug = slug
     val name = operation.operationId?.capitalized() ?: error("Currently an operation id is required")
-    return FileSpec.builder("io.bkbn.spekt.api.client.requests", name).apply {
+    return FileSpec.builder("$basePackage.requests", name).apply {
       addFunction(
         FunSpec.builder(operation.operationId!!).apply {
           if (operation.description != null) {
@@ -208,7 +208,7 @@ internal object OpenApiClientGenerator {
             }
             val reference = requestBody.content["application/json"]!!.schema as ReferenceSchema
             val schema = reference.`$ref`.substringAfterLast("/")
-            addParameter("requestBody", ClassName("io.bkbn.spekt.api.client.models", schema))
+            addParameter("requestBody", ClassName("$basePackage.models", schema))
           }
 
           val parameters = this@toRequest.parameters.plus(operation.parameters).toSet()

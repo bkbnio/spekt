@@ -7,8 +7,8 @@ data class Components(
   val schemas: Map<String, Schema> = emptyMap(),
   val parameters: Map<String, Parameter> = emptyMap(),
   val securitySchemes: Map<String, SecurityScheme> = emptyMap(),
-  val requestBodies: Map<String, Path.RequestBody> = emptyMap(),
-  val responses: Map<String, Path.Response> = emptyMap(),
+  val requestBodies: Map<String, RequestBody> = emptyMap(),
+  val responses: Map<String, Response> = emptyMap(),
   // TODO
   // val headers: Map<String, Header> = emptyMap(),
 )

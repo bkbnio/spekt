@@ -23,6 +23,7 @@ import io.bkbn.spekt.openapi_3_0.ObjectSchema
 import io.bkbn.spekt.openapi_3_0.OneOfSchema
 import io.bkbn.spekt.openapi_3_0.OpenApi
 import io.bkbn.spekt.openapi_3_0.Path
+import io.bkbn.spekt.openapi_3_0.PathOperation
 import io.bkbn.spekt.openapi_3_0.ReferenceSchema
 import io.bkbn.spekt.openapi_3_0.Schema
 import io.bkbn.spekt.openapi_3_0.StringSchema
@@ -161,10 +162,14 @@ internal object OpenApiClientGenerator {
     )
   }.flatten()
 
-  private fun Path.Operation.toRequest(slug: String, httpMethod: HttpMethod): FileSpec {
+  private fun PathOperation.toRequest(slug: String, httpMethod: HttpMethod): FileSpec {
+    val operation = this
     val name = operationId?.capitalized() ?: error("Currently an operation id is required")
     return FileSpec.builder("io.bkbn.spekt.api.client.requests", name).apply {
       addFunction(FunSpec.builder(operationId!!).apply {
+        if (operation.description != null) {
+          addKdoc(operation.description!!)
+        }
         addModifiers(KModifier.SUSPEND)
         receiver(HttpClient::class)
         returns(HttpResponse::class.asClassName())

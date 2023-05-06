@@ -187,7 +187,9 @@ internal object OpenApiClientGenerator {
           addParameter("requestBody", ClassName("io.bkbn.spekt.api.client.models", schema))
         }
 
-        this@toRequest.parameters.plus(this@toRequest.parameters).toSet().forEach { parameter ->
+        val parameters = this@toRequest.parameters.plus(operation.parameters).toSet()
+
+        parameters.forEach { parameter ->
           when (parameter) {
             is ReferenceParameter -> error("References are not currently supported")
             is LiteralParameter -> {
@@ -204,7 +206,20 @@ internal object OpenApiClientGenerator {
 
         addCode(CodeBlock.builder().apply {
           beginControlFlow("return %M(%P)", httpMethod.toMemberName(), mutableSlug)
-          addStatement("// hi")
+          beginControlFlow("url")
+          parameters.forEach { parameter ->
+            when (parameter) {
+              is ReferenceParameter -> error("References are not currently supported")
+              is LiteralParameter -> {
+                var paramName = parameter.name.sanitizePropertyName()
+                paramName = if (paramName.isSnake()) paramName.snakeToCamel() else paramName
+                if (parameter.`in`.lowercase() == "query") {
+                  addStatement("parameters.append(%S, %L)", paramName, paramName)
+                }
+              }
+            }
+          }
+          endControlFlow()
           endControlFlow()
         }.build())
       }.build())
